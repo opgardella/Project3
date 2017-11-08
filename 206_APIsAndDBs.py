@@ -59,13 +59,30 @@ except:
 
 
 # Define your function get_user_tweets here:
-
+#NEED TO: take out umsi and just get at least 20 tweets
+def get_user_tweets(user):
+    #if already in cache
+    if 'umsi' in CACHE_DICTION:
+        uprint("using cached data")
+        #grab data from chache
+        twitter_results = CACHE_DICTION['umsi']
+    else:
+        uprint("getting data from internet")
+        twitter_results = api.user_timeline('umsi') #get it form the internet
+        #but also, save in the dictionary to cache it
+        CACHE_DICTION['umsi'] = twitter_results #add it to the dictionary -- new key-val pair
+        #and then write the whole cache dictionary, now with new info added, to the file, so itll be there even after you...
+        f = open(CACHE_FNAME, 'w') #open the cache file for writing
+        f.write(json.dumps(CACHE_DICTION)) #make the whole dictionary hodling data and unique identifiers into a json-format
+        f.close()
+    return twitter_results #return list
 
 
 
 
 # Write an invocation to the function for the "umich" user timeline and
 # save the result in a variable called umich_tweets:
+umich_tweets = get_user_tweets('umich')
 
 
 
@@ -77,6 +94,11 @@ except:
 # NOTE: For example, if the user with the "TedXUM" screen name is
 # mentioned in the umich timeline, that Twitter user's info should be
 # in the Users table, etc.
+conn = sqlite3.connect('tweets.sqlite')
+cur = conn.cursor()
+cur.execute('DROP TABLE IF EXISTS Users')
+cur.execute('CREATE TABLE Users (...)')
+cur.execute('INSERT INRO Users (name, age) VALUES (?,?)', (umich_tweets[name], umich_tweets[age])) #CHANGE NAME & AGE TO RIGHT THINGS
 
 
 
