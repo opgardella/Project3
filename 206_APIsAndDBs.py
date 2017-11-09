@@ -91,13 +91,14 @@ def get_user_tweets(user):
 
 
 
-
 # Write an invocation to the function for the "umich" user timeline and
 # save the result in a variable called umich_tweets:
 umich_tweets = get_user_tweets('@umich')
-print("******")
-print (umich_tweets[0]['user']['id'])
-print("******")
+# print("******")
+# print (umich_tweets[0]['user']['id'])
+# print("******")
+
+
 
 
 
@@ -112,17 +113,34 @@ conn = sqlite3.connect('206_APIsAndDBs.sqlite')
 cur = conn.cursor()
 
 cur.execute('DROP TABLE IF EXISTS Users')
-cur.execute('CREATE TABLE Users (user_id INTEGER, screen_name VARCHAR, num_favs INTEGER, description TEXT)')
+cur.execute('CREATE TABLE Users (user_id INTEGER, screen_name VARCHAR, num_favs INTEGER, description TEXT, PRIMARY KEY (user_id))')
 
+# lst = []
+# for tweet in umich_tweets:
+#     lst.append(tweet)
+# print("------")
+# uprint(lst)
+# print("------")
+
+users_lst = []
 for tweet in umich_tweets:
-#for tweet in umich_tweets(range(20)):
-    #if umich_tweets[tweet]['user']['id'] not in Users:
+    # uprint(tweet)
+    if tweet['user']['id'] not in users_lst:
         cur.execute('INSERT INTO Users (user_id, screen_name, num_favs, description) VALUES (?,?,?,?)',
-        (umich_tweets[tweet]['user']['id'],
-        umich_tweets[tweet]['user']['screen_name'],
-        umich_tweets[tweet]['user']['favourites_count'],
-        umich_tweets[tweet]['user']['description']))
-
+        (tweet['user']['id'],
+        tweet['user']['screen_name'],
+        tweet['user']['favourites_count'],
+        tweet['user']['description']))
+        users_lst.append(tweet['user']['id'])
+    for usermen in tweet['entities']['user_mentions']:
+        if usermen['id'] not in users_lst:
+            cur.execute('INSERT INTO Users (user_id, screen_name) VALUES (?,?)',
+            (usermen['id'],
+            usermen['screen_name']))
+            users_lst.append(usermen['id'])
+# print("----")
+# uprint(users_lst)
+# print("----")
 
 ## You should load into the Tweets table:
 # Info about all the tweets (at least 20) that you gather from the
@@ -133,16 +151,19 @@ for tweet in umich_tweets:
 cur.execute('DROP TABLE IF EXISTS Tweets')
 cur.execute('CREATE TABLE Tweets (tweet_id INTEGER, text TEXT, user_posted INTEGER, time_posted DATETIME, retweets INTEGER, PRIMARY KEY (tweet_id), FOREIGN KEY (user_posted) REFERENCES Users(user_id))')
 
-cur.execute('INSERT INTO Tweets (tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)',(
-umich_tweets[0]['id'],
-umich_tweets[0]['text'],
-umich_tweets[0]['user']['id'],
-umich_tweets[0]['created_at'],
-umich_tweets[0]['retweet_count'],
-))
+tweets_lst = []
+for tweet in umich_tweets:
+    # uprint(tweet)
+    if tweet['id'] not in tweets_lst:
+        cur.execute('INSERT INTO Tweets (tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)',
+        (tweet['id'],
+        tweet['text'],
+        tweet['user']['id'],
+        tweet['created_at'],
+        tweet['retweet_count'],))
+        tweets_lst.append(tweet['id'])
 
 conn.commit()
-
 
 
 ## HINT: There's a Tweepy method to get user info, so when you have a
@@ -155,40 +176,54 @@ conn.commit()
 ## on a dictionary that represents 1 tweet to see it!
 
 
+
+
 ## Task 3 - Making queries, saving data, fetching data
+# helpful: cur.fetchall(), .join()
 
 # All of the following sub-tasks require writing SQL statements
 # and executing them using Python.
 
 # Make a query to select all of the records in the Users database.
 # Save the list of tuples in a variable called users_info.
-users_info = cur.execute('SELECT * FROM Users')
+users_info = list(cur.execute('SELECT * FROM Users'))
+#uprint(users_info)
+
 
 
 # Make a query to select all of the user screen names from the database.
 # Save a resulting list of strings (NOT tuples, the strings inside them!)
 # in the variable screen_names. HINT: a list comprehension will make
 # this easier to complete!
-screen_names = True
+screen_names = []
+for tup in list(cur.execute('SELECT screen_name FROM Users')):
+    for string in tup:
+        screen_names.append(string)
+#uprint(screen_names)
 
 
 # Make a query to select all of the tweets (full rows of tweet information)
 # that have been retweeted more than 10 times. Save the result
 # (a list of tuples, or an empty list) in a variable called retweets.
-retweets = True
+retweets = list(cur.execute('SELECT * FROM Tweets WHERE retweets > 10'))
+#uprint(retweets)
 
 
 # Make a query to select all the descriptions (descriptions only) of
 # the users who have favorited more than 500 tweets. Access all those
 # strings, and save them in a variable called favorites,
 # which should ultimately be a list of strings.
-favorites = True
+favorites = []
+for tup in list(cur.execute('SELECT description FROM Users')):
+    for string in tup:
+        favorites.append(string)
+uprint(favorites)
 
 
 # Make a query using an INNER JOIN to get a list of tuples with 2
 # elements in each tuple: the user screenname and the text of the
 # tweet. Save the resulting list of tuples in a variable called joined_data2.
-joined_data = True
+joined_data = cur.execute('SELECT screen_name, text FROM Users join Tweets on Users.user_id = Tweets.user_posted')
 
 # Make a query using an INNER JOIN to get a list of tuples with 2
 # elements in each tuple: the user screenname and the text of the
@@ -201,6 +236,7 @@ joined_data2 = True
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END
 ### OF THE FILE HERE SO YOU DO NOT LOCK YOUR DATABASE (it's fixable,
 ### but it's a pain). ###
+cur.close()
 
 ###### TESTS APPEAR BELOW THIS LINE ######
 ###### Note that the tests are necessary to pass, but not sufficient --
