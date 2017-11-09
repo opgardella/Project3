@@ -38,6 +38,16 @@ api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 
 ##### END TWEEPY SETUP CODE
 
+#to take care of unicode error
+import sys
+def uprint(*objects, sep=' ', end='\n', file=sys.stdout):
+    enc = file.encoding
+    if enc == 'UTF-8':
+        print(*objects, sep=sep, end=end, file=file)
+    else:
+        f = lambda obj: str(obj).encode(enc, errors='backslashreplace').decode(enc)
+        print(*map(f, objects), sep=sep, end=end, file=file)
+
 ## Task 1 - Gathering data
 
 ## Define a function called get_user_tweets that gets at least 20 Tweets
@@ -59,22 +69,24 @@ except:
 
 
 # Define your function get_user_tweets here:
-#NEED TO: take out umsi and just get at least 20 tweets
+# info here: https://developer.twitter.com/en/docs/tweets/timelines/api-reference/get-statuses-user_timeline
+
 def get_user_tweets(user):
     #if already in cache
-    if 'umsi' in CACHE_DICTION:
+    if user in CACHE_DICTION:
         uprint("using cached data")
         #grab data from chache
-        twitter_results = CACHE_DICTION['umsi']
+        twitter_results = CACHE_DICTION[user]
     else:
         uprint("getting data from internet")
-        twitter_results = api.user_timeline('umsi') #get it form the internet
+        twitter_results = api.user_timeline(user) #get it form the internet
         #but also, save in the dictionary to cache it
-        CACHE_DICTION['umsi'] = twitter_results #add it to the dictionary -- new key-val pair
+        CACHE_DICTION[user] = twitter_results #add it to the dictionary -- new key-val pair
         #and then write the whole cache dictionary, now with new info added, to the file, so itll be there even after you...
         f = open(CACHE_FNAME, 'w') #open the cache file for writing
         f.write(json.dumps(CACHE_DICTION)) #make the whole dictionary hodling data and unique identifiers into a json-format
         f.close()
+    #uprint (twitter_results)
     return twitter_results #return list
 
 
@@ -82,8 +94,10 @@ def get_user_tweets(user):
 
 # Write an invocation to the function for the "umich" user timeline and
 # save the result in a variable called umich_tweets:
-umich_tweets = get_user_tweets('umich')
-
+umich_tweets = get_user_tweets('@umich')
+print("******")
+print (umich_tweets[0]['user']['id'])
+print("******")
 
 
 
@@ -94,12 +108,20 @@ umich_tweets = get_user_tweets('umich')
 # NOTE: For example, if the user with the "TedXUM" screen name is
 # mentioned in the umich timeline, that Twitter user's info should be
 # in the Users table, etc.
-conn = sqlite3.connect('tweets.sqlite')
+conn = sqlite3.connect('206_APIsAndDBs.sqlite')
 cur = conn.cursor()
-cur.execute('DROP TABLE IF EXISTS Users')
-cur.execute('CREATE TABLE Users (...)')
-cur.execute('INSERT INRO Users (name, age) VALUES (?,?)', (umich_tweets[name], umich_tweets[age])) #CHANGE NAME & AGE TO RIGHT THINGS
 
+cur.execute('DROP TABLE IF EXISTS Users')
+cur.execute('CREATE TABLE Users (user_id INTEGER, screen_name VARCHAR, num_favs INTEGER, description TEXT)')
+
+for tweet in umich_tweets:
+#for tweet in umich_tweets(range(20)):
+    #if umich_tweets[tweet]['user']['id'] not in Users:
+        cur.execute('INSERT INTO Users (user_id, screen_name, num_favs, description) VALUES (?,?,?,?)',
+        (umich_tweets[tweet]['user']['id'],
+        umich_tweets[tweet]['user']['screen_name'],
+        umich_tweets[tweet]['user']['favourites_count'],
+        umich_tweets[tweet]['user']['description']))
 
 
 ## You should load into the Tweets table:
@@ -107,6 +129,20 @@ cur.execute('INSERT INRO Users (name, age) VALUES (?,?)', (umich_tweets[name], u
 # umich timeline.
 # NOTE: Be careful that you have the correct user ID reference in
 # the user_id column! See below hints.
+
+cur.execute('DROP TABLE IF EXISTS Tweets')
+cur.execute('CREATE TABLE Tweets (tweet_id INTEGER, text TEXT, user_posted INTEGER, time_posted DATETIME, retweets INTEGER, PRIMARY KEY (tweet_id), FOREIGN KEY (user_posted) REFERENCES Users(user_id))')
+
+cur.execute('INSERT INTO Tweets (tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)',(
+umich_tweets[0]['id'],
+umich_tweets[0]['text'],
+umich_tweets[0]['user']['id'],
+umich_tweets[0]['created_at'],
+umich_tweets[0]['retweet_count'],
+))
+
+conn.commit()
+
 
 
 ## HINT: There's a Tweepy method to get user info, so when you have a
@@ -126,8 +162,8 @@ cur.execute('INSERT INRO Users (name, age) VALUES (?,?)', (umich_tweets[name], u
 
 # Make a query to select all of the records in the Users database.
 # Save the list of tuples in a variable called users_info.
+users_info = cur.execute('SELECT * FROM Users')
 
-users_info = True
 
 # Make a query to select all of the user screen names from the database.
 # Save a resulting list of strings (NOT tuples, the strings inside them!)
