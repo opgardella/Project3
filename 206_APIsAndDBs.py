@@ -55,15 +55,19 @@ def uprint(*objects, sep=' ', end='\n', file=sys.stdout):
 
 CACHE_FNAME = "206_APIsAndDBs_cache.json"
 # Put the rest of your caching setup here:
-#try to open the cache and read it, load using json
+#if the cache file already exists
 try:
+    #open the file
     cache_file = open(CACHE_FNAME,'r')
+    #read the file
     cache_contents = cache_file.read()
+    #close the file
     cache_file.close()
     #load contents in json format
     CACHE_DICTION = json.loads(cache_contents)
-#if try doesn't work, create empty dictionary
+#if the cache file does not exist already
 except:
+    #create an empty dictionary for the cache
     CACHE_DICTION = {}
 
 
@@ -71,11 +75,13 @@ except:
 def get_user_tweets(user):
     #if the user is in the cache
     if user in CACHE_DICTION:
+        #show that we are getting our data from the cache
         uprint("using cached data")
         #grab data from chache
         twitter_results = CACHE_DICTION[user]
     #if the user is not already in the cache
     else:
+        #show that we are getting data from the internet (not already in cache)
         uprint("getting data from internet")
         #get the user info from the internet
         twitter_results = api.user_timeline(user)
@@ -167,6 +173,7 @@ for tweet in umich_tweets:
         tweet['user']['id'],
         tweet['created_at'],
         tweet['retweet_count'],))
+        #append the tweet id to the list so that we only add each tweet once
         tweets_lst.append(tweet['id'])
 
 #commit all changes to sqlite
@@ -217,7 +224,8 @@ retweets = list(cur.execute('SELECT * FROM Tweets WHERE retweets > 10'))  #selec
 # which should ultimately be a list of strings.
 favorites = [] #initiate favorites list to append to
 for tup in list(cur.execute('SELECT description FROM Users')):  #iterate through a list of the descritions from the Users' table
-    for string in tup: #for every string, if the string is not None type, append it to the favorites list
+    for string in tup: #for every string
+        #if the string is not the None type, then append it to the favorites list
         if string != None:
             favorites.append(string)
 #uprint(favorites)
