@@ -33,7 +33,7 @@ api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 
 ##### END TWEEPY SETUP CODE
 
-#to take care of unicode error
+#to take care of unicode error, must use uprint now instead of print
 import sys
 def uprint(*objects, sep=' ', end='\n', file=sys.stdout):
     enc = file.encoding
@@ -60,6 +60,7 @@ try:
     cache_file = open(CACHE_FNAME,'r')
     cache_contents = cache_file.read()
     cache_file.close()
+    #load contents in json format
     CACHE_DICTION = json.loads(cache_contents)
 #if try doesn't work, create empty dictionary
 except:
@@ -85,6 +86,7 @@ def get_user_tweets(user):
         f = open(CACHE_FNAME, 'w')
         #make dictionary into json format
         f.write(json.dumps(CACHE_DICTION))
+        #make sure to close the file
         f.close()
     #uprint (twitter_results)
     return twitter_results #return list
