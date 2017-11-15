@@ -118,7 +118,7 @@ cur.execute('DROP TABLE IF EXISTS Users')
 #create the Users table with the following columns
 cur.execute('CREATE TABLE Users (user_id INTEGER, screen_name VARCHAR, num_favs INTEGER, description TEXT, PRIMARY KEY (user_id))')
 
-#initiate list to add to, so we only add each user to the Users table once
+#initiate list to add to, so this way we only add each user to the Users table once
 users_lst = []
 #for every tweet in the umich_tweets data we got back
 for tweet in umich_tweets:
@@ -129,6 +129,7 @@ for tweet in umich_tweets:
         tweet['user']['screen_name'],
         tweet['user']['favourites_count'],
         tweet['user']['description']))
+        #append the user ids to the list so we only add each user once
         users_lst.append(tweet['user']['id'])
     #for the users mentioned in the tweet, if that users id is not in the list, add the users info to table and append to list
     for usermen in tweet['entities']['user_mentions']:
@@ -139,6 +140,7 @@ for tweet in umich_tweets:
             usermen['screen_name'],
             user_mentioned['favourites_count'],
             user_mentioned['description']))
+            #append the user ids to the list so we only add each user one time
             users_lst.append(usermen['id'])
 
 
